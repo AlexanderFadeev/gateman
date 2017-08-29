@@ -1,5 +1,30 @@
 'use strict';
 
+const MAX_DELTA_TIME = 1 / 30;
+const MAX_SIMULATION_STEP = 1 / 100;
+
+/**
+ * @enum {string}
+ */
+let DirectionEnum = new Enum(
+    "Right",
+    "Up",
+    "Left",
+    "Down"
+);
+
+let WorldStatus = new Enum(
+    "InProgress",
+    "Lost",
+    "Passed"
+);
+
+const GameStatusEnum = new Enum(
+    "InProgress",
+    "Loading",
+    "GameOver"
+);
+
 /**
  * @class
  * Represents a game object
@@ -42,16 +67,6 @@ class GameObject {
 
     }
 }
-
-/**
- * @enum {string}
- */
-let DirectionEnum = new Enum(
-    "Right",
-    "Up",
-    "Left",
-    "Down"
-);
 
 class MovableObject extends GameObject {
     constructor() {
@@ -114,32 +129,59 @@ class MovableObject extends GameObject {
         return shortestDirection;
     }
 
+    bumpShift(other) {
+        const rectA = this.boundaryRectangle;
+        const rectB = other.boundaryRectangle;
+        let shifts = {
+            [DirectionEnum.Right]: new Vector(rectB.right - rectA.left, 0),
+            [DirectionEnum.Up]: new Vector(0, rectB.up - rectA.down),
+            [DirectionEnum.Left]: new Vector(rectB.left - rectA.right, 0),
+            [DirectionEnum.Down]: new Vector(0, rectB.down - rectA.up),
+        };
+        const horizontalShift = Utils.min(
+            shifts[DirectionEnum.Right], shifts[DirectionEnum.Left],
+            Utils.comparator(Utils.vectorLength)
+        );
+        const verticalShift = Utils.min(
+            shifts[DirectionEnum.Up], shifts[DirectionEnum.Down],
+            Utils.comparator(Utils.vectorLength)
+        );
+        return Utils.min(
+            horizontalShift, verticalShift,
+            Utils.comparator(Utils.vectorLength)
+        );
+    }
+
     /**
      * Pushes away this from other object on contact
      * @param {GameObject} other
      */
     bump(other) {
-        const rectA = this.boundaryRectangle;
-        const rectB = other.boundaryRectangle;
-        let shifts = [
-            new Vector(rectB.right - rectA.left, 0), // right
-            new Vector(0, rectB.up - rectA.down), // up
-            new Vector(rectB.left - rectA.right, 0), // left
-            new Vector(0, rectB.down - rectA.up), // down
-        ];
-        let lengths = shifts.map((vec) => vec.length);
-        let indexOfMin = 0;
-        for (let index = 1; index < lengths.length; index++) {
-            if (lengths[index] < lengths[indexOfMin]) {
-                indexOfMin = index;
-            }
-        }
+        const shift = this.bumpShift(other);
         this.position = this.position
-            .add(shifts[indexOfMin]);
-        if (indexOfMin == 0 || indexOfMin == 2) {
-            this.speed.x = 0;
-        } else {
+            .add(shift);
+        // const rectA = this.boundaryRectangle;
+        // const rectB = other.boundaryRectangle;
+        // let shifts = [
+        //     new Vector(rectB.right - rectA.left, 0), // right
+        //     new Vector(0, rectB.up - rectA.down), // up
+        //     new Vector(rectB.left - rectA.right, 0), // left
+        //     new Vector(0, rectB.down - rectA.up), // down
+        // ];
+        // let lengths = shifts.map((vec) => vec.length);
+        // let indexOfMin = 0;
+        // for (let index = 1; index < lengths.length; index++) {
+        //     if (lengths[index] < lengths[indexOfMin]) {
+        //         indexOfMin = index;
+        //     }
+        // }
+        // this.position = this.position
+        //     .add(shifts[indexOfMin]);
+        if (shift.x == 0) {
             this.speed.y = 0;
+        }
+        if (shift.y == 0) {
+            this.speed.x = 0;
         }
     }
 
@@ -192,7 +234,7 @@ class Character extends MovableObject {
         this.animationController = null;
         this.setAirResistance(-10, 0);
         this.setFreeFallAcceleration(1000);
-        this.setMaxSpeed(new Vector(400, 9000));
+        this.setMaxSpeed(new Vector(300, 9000));
     }
 
     initAnimationController(animationsCollection) {
@@ -234,7 +276,7 @@ class Character extends MovableObject {
         if (this.collisionDirection(object) == DirectionEnum.Up) {
             this.canJump = true;
         }
-        super.bump(object);
+        super.bump(object)
     }
 
     halfBump(object) {
@@ -304,6 +346,13 @@ class Box extends MovableObject {
         super();
         this.setAirResistance(-10, 0);
         this.setFreeFallAcceleration(2500);
+    }
+
+    /**
+     * @override 
+     */
+    bump(object) {
+        super.bump(object);
     }
 
     /**
@@ -709,12 +758,6 @@ class GameLevel {
     }
 }
 
-let WorldStatus = new Enum(
-    "InProgress",
-    "Lost",
-    "Passed"
-);
-
 class WorldState {
     constructor() {
         this.objects = [];
@@ -801,7 +844,7 @@ class WorldState {
         }
     }
 
-    update(deltaTime) {
+    simulate(deltaTime) {
         for (let object of this.objects) {
             object.update(deltaTime);
             if (object.type == objectTypeEnum.Character) {
@@ -811,6 +854,14 @@ class WorldState {
             }
         }
         this.checkCollisions();
+    }
+
+    update(deltaTime) {
+        while (deltaTime > 0) {
+            const worldDeltaTime = Math.min(MAX_SIMULATION_STEP, deltaTime);
+            deltaTime -= MAX_SIMULATION_STEP;
+            this.simulate(worldDeltaTime);
+        }
         this.updateStatus();
     }
 }
@@ -924,12 +975,6 @@ class WorldStateFactory {
         return Promise.resolve(state);
     }
 }
-
-const GameStatusEnum = new Enum(
-    "InProgress",
-    "Loading",
-    "GameOver"
-);
 
 class GameState {
     constructor(params) {
@@ -1046,9 +1091,7 @@ class Game {
 
     tick() {
         try {
-            const minFPS = 30;
-            const maxDeltaTime = 1 / minFPS;
-            let deltaTime = Math.min(this.timer.deltaTime, maxDeltaTime);
+            let deltaTime = Math.min(this.timer.deltaTime, MAX_DELTA_TIME);
             this.timer.reset();
             this.update(deltaTime);
         } catch (error) {

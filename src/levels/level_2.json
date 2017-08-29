@@ -179,7 +179,7 @@
                 }, 
                 {
                  "gid":69,
-                 "height":60,
+                 "height":64,
                  "id":26,
                  "name":"Box",
                  "rotation":0,
@@ -191,7 +191,7 @@
                 }, 
                 {
                  "gid":69,
-                 "height":60,
+                 "height":64,
                  "id":25,
                  "name":"Box",
                  "rotation":0,
@@ -203,7 +203,7 @@
                 }, 
                 {
                  "gid":69,
-                 "height":60,
+                 "height":64,
                  "id":33,
                  "name":"Box",
                  "rotation":0,
@@ -297,7 +297,7 @@
                 }, 
                 {
                  "gid":69,
-                 "height":60,
+                 "height":64,
                  "id":41,
                  "name":"Box",
                  "rotation":0,

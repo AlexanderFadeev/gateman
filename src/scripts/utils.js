@@ -164,4 +164,31 @@ class Utils {
     static bound(value, min, max) {
         return Math.min(max, Math.max(value, min));
     }
+
+    static last(arr) {
+        return arr.length > 0 ? arr[arr.length - 1] : null;
+    }
+
+    static vectorLength(vector) {
+        return vector.length;
+    }
+
+    static comparator(fn) {
+        return (valueA, valueB) => (fn(valueA) - fn(valueB));
+    }
+
+    static min(...valuesAndComparator) {
+        const values = valuesAndComparator.slice(0, valuesAndComparator.length - 1);
+        const comparator = Utils.last(valuesAndComparator);
+        if (values.length == 0) {
+            return null;
+        }
+        let minValue = values[0];
+        for (let index = 1; index < values.length; index++) {
+            if (comparator(values[index], minValue) < 0) {
+                minValue = values[index];
+            }
+        }
+        return minValue;
+    }
 }
