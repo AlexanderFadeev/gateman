@@ -1,7 +1,5 @@
-# afadeev-game
-Summer game project
-
-Outdated, now developed in https://github.com/AlexanderFadeev/AlexanderFadeev.github.io
+# Gateman
+Summer 2017 game project
 
 - [Roadmap](https://docs.google.com/spreadsheets/d/1UJzFk7E6648vr8fL_EKifkJ81J_OzJvMoyzt6S755yU/edit#gid=0)
 - [Mindmap](https://mm.tt/914992689?t=I5kofZGGRf)
